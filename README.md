@@ -72,3 +72,103 @@ jobs:
     secrets:
       github-token: ${{ secrets.REPO_ACCESS_PAT }}
 ```
+
+## pr-enforce-semver-labels
+```yaml
+name: Enforce SemVer Labels
+on:
+  pull_request_target:
+    types: [labeled, unlabeled, opened, edited, synchronize]
+
+jobs:
+  enforce-semver-labels:
+    uses: localstack/meta/.github/workflows/pr-enforce-semver-labels.yml@main
+    secrets:
+      github-token: ${{ secrets.REPO_ACCESS_PAT }}
+```
+
+## pr-enforce-no-major
+```yaml
+name: Enforce no major on master
+
+on:
+  pull_request_target:
+    types: [labeled, unlabeled, opened, edited, synchronize]
+    # only enforce for PRs targeting the master branch
+    branches:
+    - master
+
+jobs:
+  enforce-no-major:
+    permissions:
+      issues: write
+      pull-requests: write
+    uses: localstack/meta/.github/workflows/pr-enforce-no-major.yml@main
+    secrets:
+      github-token: ${{ secrets.REPO_ACCESS_PAT }}
+```
+
+## pr-enforce-no-major-minor
+```yaml
+name: Enforce no major or minor on master
+
+on:
+  pull_request_target:
+    types: [labeled, unlabeled, opened, edited, synchronize]
+    # only enforce for PRs targeting the master branch
+    branches:
+    - master
+
+jobs:
+  enforce-no-major-minor:
+    permissions:
+      issues: write
+      pull-requests: write
+    uses: localstack/meta/.github/workflows/pr-enforce-no-major-minor.yml@main
+    secrets:
+      github-token: ${{ secrets.REPO_ACCESS_PAT }}
+```
+## upgrade-python-dependencies
+
+This reusable workflow adds an automated upgrade of dependencies in python repositories.
+As a prerequisite the repository must define the make target `upgrade-all-deps` which should produce some kind of lock file checked in into the repository.
+
+```yaml
+name: Upgrade pinned Python dependencies
+
+on:
+  workflow_call:
+    secrets:
+      github-token:
+        required: true
+        description: A GitHub token with access to the issues of the calling repo
+
+jobs:
+  upgrade-dependencies:
+    name: Upgrade Pinned Python Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Upgrade all requirements files
+        run: make upgrade-all-reqs
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v3
+        with:
+          title: "Upgrade pinned Python dependencies"
+          body: "This PR upgrades all the pinned Python dependencies."
+          branch: "upgrade-dependencies"
+          author: "LocalStack Bot <localstack-bot@users.noreply.github.com>"
+          committer: "LocalStack Bot <localstack-bot@users.noreply.github.com>"
+          commit-message: "Upgrade pinned Python dependencies"
+          labels: "area: dependencies, semver: patch"
+          token: ${{ secrets.github-token }}
+```
